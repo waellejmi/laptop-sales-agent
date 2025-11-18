@@ -87,7 +87,7 @@ df["os"] = df["os"].replace({"Ubuntu": "Linux"})
 
 
 df["price_euro"] = df["price_inIndianRupees"] * 0.0097
-
+df["price_euro"] = df["price_euro"].round(2)
 
 # In[9]:
 
