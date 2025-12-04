@@ -70,7 +70,7 @@ def filter_laptops(
     if resolution_w:
         mask = mask & (df["resolution_w"] >= resolution_w)
     if resolution_h:
-        mask = mask & (df["resolution_h"] == resolution_h)
+        mask = mask & (df["resolution_h"] >= resolution_h)
 
     #  Numeric matching MAX
     if price_euro:
@@ -83,7 +83,7 @@ def filter_laptops(
     elif sort_by:
         logger.warning(f"sort_by column '{sort_by}' not found in dataset")
 
-    if top_k is not None and len(result) > top_k:
+    if top_k and len(result) > top_k:
         result = result.head(top_k)
 
     return result.reset_index(drop=True)
@@ -99,6 +99,7 @@ if __name__ == "__main__":
     df = filter_laptops(
         model_name="Microsoft ",
         cpu_cores=8,
+        resolution_type="fhd",
         os="windows",
         top_k=2,
         sort_by="price_euro",
