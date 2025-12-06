@@ -3,6 +3,20 @@ import re
 import pandas as pd
 
 
+def detect_apple(cpu_str: str):
+    s = (cpu_str or "").lower()
+    m = re.search(r"(m\d)\s*(pro|max)?", s)
+    if not m:
+        m = re.search(r"apple\s*(m\d)\s*(pro|max)?", s)
+    if not m:
+        return None, None
+    family = m.group(1)
+    variant = m.group(2)
+    c = re.search(r"(\d+)-core", s)
+    cores = int(c.group(1)) if c else None
+    return (family, variant), cores
+
+
 def cpu_generation(cpu_str: str) -> int:
     s = (cpu_str or "").lower()
     m = re.search(r"(\d+)(?:th|st|nd|rd)\s+gen", s)
@@ -20,6 +34,30 @@ def cpu_generation(cpu_str: str) -> int:
 
 
 def cpu_tier(cpu_str: str) -> float:
+    apple, cores = detect_apple(cpu_str)
+
+    if apple[0] if apple else False:
+        family, variant = apple
+        if family == "m1":
+            if variant == "max":
+                base = 5.2
+            elif variant == "pro":
+                base = 4.9
+            else:
+                base = 4.0
+        elif family == "m2":
+            if variant == "max":
+                base = 5.45
+            elif variant == "pro":
+                base = 5.1
+            else:
+                base = 4.25
+        else:
+            base = 4.0
+        if cores:
+            base += (cores - 8) * 0.05
+        return round(base, 3)
+
     s = (cpu_str or "").lower()
     if "celeron" in s:
         base = 1.0
@@ -50,7 +88,7 @@ def cpu_tier(cpu_str: str) -> float:
 
 
 def gpu_tier(gpu_str: str) -> float:
-    s = (gpu_str or "").lower()
+    s = gpu_str.lower()
 
     if any(k in s for k in ("uhd", "intel uhd", "intel uhd graphics")):
         return 1.0
@@ -62,34 +100,35 @@ def gpu_tier(gpu_str: str) -> float:
         return 1.6
 
     nvidia = {
-        "gtx 1050": 2.5,
-        "gtx 1650": 3.2,
-        "gtx 1660": 3.9,
-        "rtx 2050": 4.2,
-        "rtx 3050": 4.9,
-        "rtx 3050 ti": 5.1,
-        "rtx 3060": 6.0,
-        "rtx 3070": 7.2,
-        "rtx 3070 ti": 7.6,
-        "rtx 3080": 8.6,
-        "rtx 3080 ti": 9.2,
-        "rtx 4060": 6.5,
-        "rtx 4070": 8.0,
-        "rtx 4080": 9.0,
-        "rtx 4090": 9.8,
+        "1050": 2.5,
+        "1650": 3.2,
+        "1660": 3.9,
+        "2050": 4.2,
+        "3050 ti": 5.1,
+        "3050": 4.9,
+        "3060": 6.0,
+        "3070": 7.2,
+        "3070 ti": 7.6,
+        "3080 ti": 9.2,
+        "3080ti": 9.2,
+        "3080": 8.6,
+        "A5500": 8.65,
     }
     for key, val in nvidia.items():
         if key in s:
             return val
 
     amd = {
+        "rx 550": 2.5,
         "rx 5500m": 3.5,
         "rx 5600m": 4.0,
         "rx 6500m": 4.4,
-        "rx 6600m": 6.0,
-        "rx 6700m": 7.0,
+        "rx 6600m": 4.8,
+        "rx 6650m": 5.5,
+        "rx 6700s": 6.4,
+        "rx 6700m": 7,
+        "rx 6800s": 7.4,
         "rx 6800m": 7.6,
-        "rx 6800s": 7.5,
     }
     for key, val in amd.items():
         if key in s:
@@ -98,35 +137,40 @@ def gpu_tier(gpu_str: str) -> float:
     intel_arc = {
         "a350m": 3.5,
         "a370m": 4.0,
-        "a550m": 5.0,
-        "a730m": 6.0,
-        "a770m": 7.0,
     }
     for key, val in intel_arc.items():
         if key in s:
             return val
 
-    if "mx" in s and ("mx" in s and re.search(r"mx\s*\d+", s)):
-        return 2.2
+    mx = {
+        "mx330": 2,
+        "mx350": 2.2,
+        "mx450": 2.3,
+        "mx550": 2.4,
+        "mx570": 2.5,
+    }
+    for key, val in mx.items():
+        if key in s:
+            return val
+
+    quadro = {
+        "t500": 2.2,
+        "t600": 2.8,
+        "t1200": 3.5,
+    }
+    for key, val in quadro.items():
+        if key in s:
+            return val
 
     m = re.search(r"(\d+)\s*-\s*core|\b(\d+)\s*core\b", s)
     if m:
         core = int(m.group(1) or m.group(2))
-        if core >= 60:
-            return 8.5
-        if core >= 40:
-            return 7.0
         if core >= 30:
             return 5.5
         if core >= 20:
             return 4.5
         if core >= 8:
             return 3.0
-
-    if "quadro" in s or "rtx a" in s:
-        if "t" in s or "t1000" in s:
-            return 3.5
-        return 6.5
 
     return 1.5
 
@@ -145,19 +189,31 @@ if __name__ == "__main__":
     df = df[
         [
             "model_name",
+            "brand",
             "cpu",
-            "gpu",
+            "cpu_cores",
+            "cpu_threads",
             "ram",
             "ssd_gb",
+            "hdd_gb",
+            "os",
+            "gpu",
+            "gpu_vram_gb",
+            "screen_size_in",
+            "resolution_w",
+            "resolution_h",
+            "resolution_type",
+            "spec_score",
             "price_euro",
             "cpu_tier",
             "gpu_tier",
+            "ssd_present",
+            # normalized scores
             "norm_cpu",
             "norm_gpu",
             "norm_ram",
             "norm_price",
-            "ssd_present",
         ]
     ]
-    df.to_csv("../data/tiers.csv", index=False)
+    df.to_csv("../data/laptops_enhanced.csv", index=False)
     print(df.head(10).to_string())

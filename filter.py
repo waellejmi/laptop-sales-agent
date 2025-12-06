@@ -25,7 +25,7 @@ def filter_laptops(
     price_euro: float | None = None,
     sort_by: str | None = None,
     top_k: int | None = None,
-    dataset_path: str = "./data/laptops_cleaned.csv",
+    dataset_path: str = "./data/laptops_enhanced.csv",
 ):
     try:
         df = pd.read_csv(dataset_path)
@@ -87,20 +87,3 @@ def filter_laptops(
         result = result.head(top_k)
 
     return result.reset_index(drop=True)
-
-
-if __name__ == "__main__":
-    df = filter_laptops(price_euro=500, os="linux", sort_by="spec_score", top_k=1)
-    print(df.to_string())
-    df = filter_laptops(brand="ASUS", gpu="RTX 3080", ram=16, resolution_h=1440)
-    df = filter_laptops(
-        resolution_type="4K", price_euro=1500.0, sort_by="spec_score", top_k=3
-    )
-    df = filter_laptops(
-        model_name="Microsoft ",
-        cpu_cores=8,
-        resolution_type="fhd",
-        os="windows",
-        top_k=2,
-        sort_by="price_euro",
-    )
