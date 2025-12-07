@@ -20,20 +20,15 @@ def test_agent(user_input: str):
 
 
 if __name__ == "__main__":
-    # Test Case 1: Basic request
     print("TEST 1: Basic gaming laptop")
     test_agent("I need a gaming laptop under 2000 euros")
 
-    # Test Case 2: Specific filters
     print("\nTEST 2: Specific requirements")
     test_agent("I want an Asus laptop with 4K display for gaming, budget is 2000 euros")
 
-    # Test Case 3: Student use
     print("\nTEST 3: Student laptop")
     test_agent(
         "I'm a student, need something for programming and web browsing, around 800 euros"
     )
-
-    # Test Case 4: Impossible filters
     print("\nTEST 4: No matches")
     test_agent("I need a laptop with 128GB RAM and RTX 4090 under 500 euros")

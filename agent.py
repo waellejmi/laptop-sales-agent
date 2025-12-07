@@ -9,7 +9,7 @@ from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph, add_messages
 from langgraph.types import Command
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from filter import filter_laptops
 from scoring import compute_scores, get_weights
@@ -17,40 +17,40 @@ from scoring import compute_scores, get_weights
 load_dotenv()
 
 
-class LaptopSpecification(TypedDict, total=False):
-    model_name: str
-    brand: str
-    cpu: str
-    cpu_cores: int
-    cpu_threads: int
-    ram: int
-    ssd_gb: int
-    hdd_gb: int
-    os: str
-    gpu: str
-    gpu_vram_gb: int
-    screen_size_in: float
-    resolution_w: int
-    resolution_h: int
-    resolution_type: str
-    spec_score: int
-    price_euro: float
+class LaptopSpecification(BaseModel):
+    model_name: Optional[str] = None
+    brand: Optional[str] = None
+    cpu: Optional[str] = None
+    cpu_cores: Optional[int] = None
+    cpu_threads: Optional[int] = None
+    ram: Optional[int] = None
+    ssd_gb: Optional[int] = None
+    hdd_gb: Optional[int] = None
+    os: Optional[str] = None
+    gpu: Optional[str] = None
+    gpu_vram_gb: Optional[float] = None
+    screen_size_in: Optional[float] = None
+    resolution_w: Optional[int] = None
+    resolution_h: Optional[int] = None
+    resolution_type: Optional[str] = None
+    spec_score: Optional[int] = None
+    price_euro: Optional[float] = None
 
 
-class UserRequestClassification(TypedDict):
+class UserRequestClassification(BaseModel):
     usage_profile: Literal["gaming", "student", "basic", "workstation"]
     user_emphasis: Optional[
         list[Literal["cpu_tier", "gpu_tier", "ram", "ssd_present", "price"]]
-    ]
-    filters: Optional[LaptopSpecification]
+    ] = None
+    filters: Optional[LaptopSpecification] = None
 
 
 class SalesAgentState(TypedDict):
     user_input: str
 
-    classfication: UserRequestClassification | None
+    classification: dict[str, Any] | None
 
-    filtered_laptops: pd.DataFrame | str | None
+    filtered_laptops: list[dict[str, Any]] | None
 
     recommended_laptops: list[dict[str, Any]] | None
 
@@ -89,7 +89,7 @@ def build_graph(provider: str = "groq"):
 
     def classify_intent(
         state: SalesAgentState,
-    ) -> Command[Literal["get_filtered_laptops", "get_reccomanded_laptops"]]:
+    ) -> Command[Literal["get_filtered_laptops", "get_recommended_laptops"]]:
         """Use LLM to parse user prompt to get his usage profile, his emphasis and hard filters."""
 
         structured_llm = llm.with_structured_output(UserRequestClassification)
@@ -109,62 +109,72 @@ def build_graph(provider: str = "groq"):
 
         classification = structured_llm.invoke(classification_prompt)
 
-        if classification["filters"]:
-            goto = "get_filter_laptops"
+        if classification.filters:
+            goto = "get_filtered_laptops"
         else:
-            goto = "get_reccomanded_laptops"
+            goto = "get_recommended_laptops"
 
-        return Command(update={"classification": classification}, goto=goto)
+        return Command(
+            update={"classification": classification.model_dump()}, goto=goto
+        )
 
     def get_filtered_laptops(
         state: SalesAgentState,
-    ) -> Command[Literal["get_reccomanded_laptops", "inform_user_no_laptops"]]:
+    ) -> Command[Literal["get_recommended_laptops", "inform_user_no_laptops"]]:
         """Filter laptops based on user criteria."""
-        classfication = state.get("classification", {})
-        filters = classfication.get("filters", {})
+        classification = state.get("classification", {})
+        filters = classification.get("filters", {})
         try:
-            filtered_laptops = filter_laptops(**filters)
-            if filtered_laptops.empty:
-                goto = "inform_user_no_laptops"
-            else:
-                goto = "get_reccomanded_laptops"
+            filtered_laptops_df = filter_laptops(**filters)
+            if filtered_laptops_df.empty:
+                return Command(
+                    update={"filtered_laptops": []}, goto="inform_user_no_laptops"
+                )
+            filtered_laptops = filtered_laptops_df.to_dict(orient="records")
             return Command(
                 update={"filtered_laptops": filtered_laptops},
-                goto=goto,
+                goto="get_recommended_laptops",
             )
-        # TODO: add erros state and add this here
         except Exception as e:
             return Command(
-                update={"filtered_laptops": f"Filtering Error Happened: {str(e)}"},
+                update={
+                    "filtered_laptops": [],
+                    "final_response": f"Filtering Error: {str(e)}",
+                },
                 goto="inform_user_no_laptops",
             )
 
     def inform_user_no_laptops(state: SalesAgentState) -> dict:
         """Inform the user that no laptops matched their criteria."""
+        return {
+            "final_response": (
+                "Unfortunately, no laptops match your specified criteria. "
+                "Please consider adjusting your requirements."
+            )
+        }
 
-        state["final_response"] = (
-            "Unfortunately, no laptops match your specified criteria. "
-            "Please consider adjusting your requirements."
-        )
-        return {}
-
-    def get_reccomanded_laptops(
+    def get_recommended_laptops(
         state: SalesAgentState,
     ) -> Command[Literal["explain_reccomandations"]]:
         """Apply user pofile and emphasis to recommend laptops."""
-        classfication = state.get("classification", {})
-        usage_profile = classfication.get("usage_profile", "basic")
-        user_emphasis = classfication.get("user_emphasis", [])
+
+        classification = state.get("classification", {})
+        usage_profile = classification.get("usage_profile", "basic")
+        user_emphasis = classification.get("user_emphasis", [])
         filtered_laptops = state.get("filtered_laptops", pd.DataFrame())
+
         profile_weights = get_weights(usage_profile, user_emphasis)
-        if filtered_laptops.empty:
+
+        if filtered_laptops is None or len(filtered_laptops) == 0:
             df = pd.read_csv("./data/laptops_enhanced.csv")
-            top3_ranked = compute_scores(df, profile_weights).head(3)
         else:
-            top3_ranked = compute_scores(filtered_laptops, profile_weights).head(3)
-        reccomanded_laptops = top3_ranked.to_dict(orient="records")
+            df = pd.DataFrame(filtered_laptops)
+
+        top3_ranked = compute_scores(df, profile_weights).head(3)
+        recommended_laptops = top3_ranked.to_dict(orient="records")
+
         return Command(
-            update={"recommended_laptops": reccomanded_laptops},
+            update={"recommended_laptops": recommended_laptops},
             goto="explain_reccomandations",
         )
 
@@ -172,13 +182,13 @@ def build_graph(provider: str = "groq"):
         state: SalesAgentState,
     ) -> Command[Literal["send_reply"]]:
         """Generate a final response explaining the recommendations to the user."""
-        reccomanded_laptops = state.get("recommended_laptops", [])
+        reccomended_laptops = state.get("recommended_laptops", [])
         user_context = state.get("user_input", "")
 
         explanation_prompt = f"""
         The following laptops have been recommended based on the user's needs:
 
-        {reccomanded_laptops}
+        {reccomended_laptops}
 
         Please provide a detailed explanation of why these laptops are suitable for the user.
 
@@ -207,7 +217,7 @@ def build_graph(provider: str = "groq"):
     workflow.add_node("classify_intent", classify_intent)
     workflow.add_node("get_filtered_laptops", get_filtered_laptops)
     workflow.add_node("inform_user_no_laptops", inform_user_no_laptops)
-    workflow.add_node("get_reccomanded_laptops", get_reccomanded_laptops)
+    workflow.add_node("get_recommended_laptops", get_recommended_laptops)
     workflow.add_node("explain_reccomandations", explain_reccomandations)
     workflow.add_node("send_reply", send_reply)
 
