@@ -10,4 +10,5 @@ filter = filter_laptops(
 
 weights = get_weights("gaming", user_emphasis=["price"])
 ranked = compute_scores(filter, weights)
-print(ranked)
+ranked = ranked.head(2)
+print(ranked.to_dict(orient="list"))

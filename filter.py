@@ -23,8 +23,8 @@ def filter_laptops(
     resolution_type: str | None = None,
     spec_score: int | None = None,
     price_euro: float | None = None,
-    sort_by: str | None = None,
-    top_k: int | None = None,
+    # sort_by: str | None = None,
+    # top_k: int | None = None,
     dataset_path: str = "./data/laptops_enhanced.csv",
 ):
     try:
@@ -78,12 +78,12 @@ def filter_laptops(
 
     result = df[mask].copy()
 
-    if sort_by and sort_by in result.columns:
-        result = result.sort_values(by=sort_by, ascending=False)
-    elif sort_by:
-        logger.warning(f"sort_by column '{sort_by}' not found in dataset")
-
-    if top_k and len(result) > top_k:
-        result = result.head(top_k)
+    # if sort_by and sort_by in result.columns:
+    #     result = result.sort_values(by=sort_by, ascending=False)
+    # elif sort_by:
+    #     logger.warning(f"sort_by column '{sort_by}' not found in dataset")
+    #
+    # if top_k and len(result) > top_k:
+    #     result = result.head(top_k)
 
     return result.reset_index(drop=True)
