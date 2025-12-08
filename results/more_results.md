@@ -1,8 +1,6 @@
-The questions can be found in [test.py](https://github.com/waellejmi/laptop-sales-agent/blob/main/test.py)
-# TEST 1: Gaming Laptop
-================================================================================
-AGENT RESPONSE:
-================================================================================
+The questions can be found in [tests.py](https://github.com/waellejmi/laptop-sales-agent/blob/main/test.py)
+# TEST 1: Gaming Laptops
+## AGENT RESPONSE:
 <think>
 Okay, let's see. The user wants the best gaming laptop under 3000 euros that can handle the latest games in 4K smoothly. So first, I need to look at the specs of the three laptops provided.
 
@@ -89,11 +87,9 @@ For the user’s specific need of **4K gaming in a laptop under €3000**, the *
 ================================================================================
 
 
-TEST 2: Apple Fanboy
+# TEST 2: Apple Fanboy
 
-================================================================================
-AGENT RESPONSE:
-================================================================================
+## AGENT RESPONSE:
 <think>
 Okay, let's see. The user wants a laptop for basic web surfing and is part of the Apple ecosystem. They’re looking for the best option under 1500 euros. The laptops recommended are the MacBook Air 2022, MacBook Air 2020, and MacBook Pro 2022.
 
@@ -188,11 +184,9 @@ All three are excellent choices for basic tasks, but the **Air 2022** maximizes 
 ================================================================================
 
 
-TEST 3: Exact Model
+# TEST 3: Exact Model
 
-================================================================================
-AGENT RESPONSE:
-================================================================================
+## AGENT RESPONSE:
 <think>
 Okay, let's see. The user is asking if the specific Lenovo IdeaPad Gaming 3 82K201UEIN laptop is available in the store. But the initial query was about recommending laptops based on their needs. The user provided a detailed list of the laptop's specs and a final score. So, I need to explain why this particular laptop is suitable for them.
 
@@ -260,11 +254,9 @@ Since I cannot check inventory for physical stores, I recommend:
 Let me know if you’d like further guidance! 😊
 ================================================================================
 
- # TEST 4: Very Specific Student Needs
+# TEST 4: Very Specific Student Needs
 
-================================================================================
-AGENT RESPONSE:
-================================================================================
+## AGENT RESPONSE:
 <think>
 Okay, let's see. The user is going to university and needs a laptop for taking notes and doing assignments. Their main concern is the price-to-performance ratio, with a budget of around 800 to 900 euros.
 
@@ -433,9 +425,7 @@ Let me know if you’d like help narrowing down based on specific tasks!
 --- 
 
 # TEST 5: Non English Input
-================================================================================
-AGENT RESPONSE:
-================================================================================
+## AGENT RESPONSE:
 <think>
 Okay, let me try to figure out why these three laptops are being recommended for the user who wants a gaming laptop. First, I need to understand the user's needs. They mentioned they want a gaming laptop, so performance is key. Gaming laptops typically need a powerful CPU, a strong GPU, enough RAM, and good storage. Let's break down each laptop's specs and see how they meet these requirements.
 

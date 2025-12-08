@@ -2,8 +2,7 @@
 **User_Input**: 
 > I need a gaming laptop under 2000 euros
 
-AGENT RESPONSE:
-================================================================================
+## AGENT RESPONSE:
 ```xml
 <think>
 Okay, let's see. The user is looking for a gaming laptop under 2000 euros. They provided three options. First, I need to check each laptop's price to make sure they fit the budget. The first one is 1804.2 euros, the second is 1931.13, and the third is 1357.9. All are under 2000, so that's good.
@@ -108,8 +107,7 @@ All options meet your budget and gaming needs, so your choice depends on whether
 **User_Input**:
 > I want an Asus laptop with 4K display for gaming, budget is 2000 euros
 
-AGENT RESPONSE:
-================================================================================
+## AGENT RESPONSE:
 ```xml
 <think>
 Okay, let me start by understanding the user's needs. They want an Asus laptop with a 4K display for gaming, and their budget is around 2000 euros. The three laptops recommended all have 4K screens, which is good. Now, I need to break down each laptop's specs and see how they meet the user's requirements.
@@ -195,12 +193,11 @@ All three laptops meet the user’s €2000 budget and 4K gaming needs, but the 
 
 
 
-### TEST 3: Student laptop
+# TEST 3: Student laptop
 **User_Input**:
 >I'm a student, need something for programming and web browsing, around 800 euros
 
-AGENT RESPONSE:
-================================================================================
+## AGENT RESPONSE:
 ```xml
 <think>
 Okay, let's see. The user is a student who needs a laptop for programming and web browsing, with a budget around 800 euros. They've been given three options. I need to explain why each of these laptops is suitable based on their needs.
@@ -306,7 +303,5 @@ All three laptops meet the core requirements (programming, web browsing) and fit
 >I need a laptop with 128GB RAM and RTX 4090 under 500 euros
 
 
-AGENT RESPONSE:
-================================================================================
+## AGENT RESPONSE:
 Unfortunately, no laptops match your specified criteria. Please consider adjusting your requirements.
-================================================================================
