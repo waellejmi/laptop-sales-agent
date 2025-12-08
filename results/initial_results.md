@@ -1,6 +1,7 @@
-# TEST 1: Basic gaming laptop
+# TEST 1: Basic gaming laptop 
+**User_Input**: 
+> I need a gaming laptop under 2000 euros
 
-================================================================================
 AGENT RESPONSE:
 ================================================================================
 ```xml
@@ -104,8 +105,9 @@ All options meet your budget and gaming needs, so your choice depends on whether
 ---
 
 # TEST 2: Specific requirements
+**User_Input**:
+> I want an Asus laptop with 4K display for gaming, budget is 2000 euros
 
-================================================================================
 AGENT RESPONSE:
 ================================================================================
 ```xml
@@ -194,8 +196,9 @@ All three laptops meet the user’s €2000 budget and 4K gaming needs, but the 
 
 
 ### TEST 3: Student laptop
+**User_Input**:
+>I'm a student, need something for programming and web browsing, around 800 euros
 
-================================================================================
 AGENT RESPONSE:
 ================================================================================
 ```xml
@@ -299,8 +302,10 @@ All three laptops meet the core requirements (programming, web browsing) and fit
 
 
 # TEST 4: No matches
+**User_Input**:
+>I need a laptop with 128GB RAM and RTX 4090 under 500 euros
 
-================================================================================
+
 AGENT RESPONSE:
 ================================================================================
 Unfortunately, no laptops match your specified criteria. Please consider adjusting your requirements.

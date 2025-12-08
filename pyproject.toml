@@ -1,0 +1,17 @@
+[project]
+name = "laptop-sales-agent"
+version = "0.1.0"
+description = "A portable LangGraph-based laptop recommendation agent"
+requires-python = ">=3.10"
+
+dependencies = [
+    "pandas",
+    "python-dotenv",
+    "pydantic",
+    "langchain-core",
+    "langchain-groq",
+    "langchain-huggingface",
+    "langgraph",
+]
+
+
