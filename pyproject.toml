@@ -7,6 +7,9 @@ requires-python = ">=3.10"
 dependencies = [
     "pandas",
     "python-dotenv",
+    "beautifulsoup4",
+    "ddgs",
+    "langchain_community",
     "pydantic",
     "langchain-core",
     "langchain-groq",

@@ -151,7 +151,7 @@ def build_graph(provider: str = "groq"):
         game_name = classification.get("specific_game", "")
         try:
             recc_game_requirements = get_system_requirements(game_name)
-            state.update(game_system_requirements=recc_game_requirements)
+            # state.update(game_system_requirements=recc_game_requirements)
             structured_llm = llm.with_structured_output(GameSpecification)
 
             mapping_prompt = f"""

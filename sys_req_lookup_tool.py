@@ -96,4 +96,5 @@ def get_system_requirements(game_name: str):
 
 if __name__ == "__main__":
     game_name = "the finals"
-    print(get_system_requirements(game_name))
+    print(search_web(game_name))
+    # print(get_system_requirements(game_name))
