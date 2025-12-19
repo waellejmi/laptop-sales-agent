@@ -1,0 +1,99 @@
+import difflib
+import re
+from typing import Dict
+
+import requests
+from bs4 import BeautifulSoup
+from langchain_community.tools import DuckDuckGoSearchResults
+
+
+class GameNotFound(Exception):
+    pass
+
+
+def game_normalize(text) -> str:
+    return re.sub(r"\W+", " ", text).lower().strip()
+
+
+def title_normalize(text) -> str:
+    # s = text.lower().strip()
+    parts = text.split("system requirements", 1)
+    return parts[0].strip() if len(parts) > 1 else text
+
+
+def best_match(game_name, results):
+    game_name_norm = game_normalize(game_name)
+    best_score = 0
+    best_result = None
+    best_index = -1
+    for idx, result in enumerate(results):
+        title_norm = title_normalize(result["title"]).lower().strip()
+        score = difflib.SequenceMatcher(None, game_name_norm, title_norm).ratio()
+        if score > best_score:
+            best_score = score
+            best_result = result
+            best_index = idx
+    if best_score < 0.4:
+        raise GameNotFound(f"No good online match found for '{game_name}'")
+    return best_result, best_score, best_index
+
+
+def search_web(game_name: str) -> Dict[str, str]:
+    """
+    Search the web for a game system requirments using DuckDuckGo and return the systemrequirementslab  and returns top 3 links
+    """
+    query = f"{game_name} system requirements site:systemrequirementslab.com"
+    try:
+        search = DuckDuckGoSearchResults(output_format="list", num_results=3)
+        results = search.invoke(query)
+        return results
+    except Exception as e:
+        return {"error": f"Error while searching the web: {str(e)}"}
+
+
+def scrape_from_srl(url: str) -> str:
+    """
+    Given a URL, fetch the page and extract the system requirements information using a CSS selector.
+    """
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        selector = ".container > div:nth-child(5) > div:nth-child(4) > div:nth-child(1)"
+        req_section = soup.select_one(selector)
+        if req_section:
+            return req_section.get_text(separator="\n").strip()
+        else:
+            return "System requirements section not found."
+    except Exception as e:
+        return f"Error fetching system requirements: {str(e)}"
+
+
+def get_system_requirements(game_name: str):
+    try:
+        results = search_web(game_name)
+        result, score, id = best_match(game_name, results)
+        print(result, score, id)
+        output = scrape_from_srl(results[id]["link"])
+        cpu = re.search(r"CPU\s*: (.+)", output)
+        ram = re.search(r"RAM\s*: (.+)", output)
+        gpu = re.search(r"VIDEO CARD\s*: (.+)", output)
+
+        cpu = cpu.group(1) if cpu else "Not found"
+        ram = ram.group(1) if ram else "Not found"
+        gpu = gpu.group(1) if gpu else "Not found"
+        game_system_req = {
+            "game_name": title_normalize(result["title"]),
+            "cpu": cpu,
+            "gpu": gpu,
+            "ram": ram,
+        }
+        return game_system_req
+    except GameNotFound as e:
+        return e
+
+
+if __name__ == "__main__":
+    game_name = "tot overdos"
+    print(get_system_requirements(game_name))
