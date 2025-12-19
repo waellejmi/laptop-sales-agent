@@ -91,9 +91,9 @@ def get_system_requirements(game_name: str):
         }
         return game_system_req
     except GameNotFound as e:
-        return e
+        raise e
 
 
 if __name__ == "__main__":
-    game_name = "tot overdos"
+    game_name = "the finals"
     print(get_system_requirements(game_name))
