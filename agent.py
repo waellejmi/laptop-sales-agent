@@ -39,7 +39,6 @@ class LaptopSpecification(BaseModel):
 
 
 class GameSpecification(BaseModel):
-    cpu: Optional[str] = None
     ram: Optional[int] = None
     gpu: Optional[str] = None
 
@@ -59,8 +58,9 @@ class SalesAgentState(TypedDict):
 
     classification: dict[str, Any] | None
 
-    game_system_requirements: dict[str, Any] | None
     game_specific_filters: dict[str, Any] | None
+    game_system_requirements: dict[str, Any] | None
+
     filtered_laptops: list[dict[str, Any]] | None
 
     recommended_laptops: list[dict[str, Any]] | None
@@ -157,25 +157,25 @@ def build_graph(provider: str = "groq"):
             mapping_prompt = f"""
                 Given the following recommended system requirements for the game {recc_game_requirements["game_name"]}:
 
-                CPU: {recc_game_requirements["cpu"]}
                 GPU: {recc_game_requirements["gpu"]}
                 RAM: {recc_game_requirements["ram"]}
                 
                 Our dataset includes:
-                CPUs: Intel Core i3 (10th-12th gen), Intel Core i5 (10th-13th gen), Intel Core i7 (10th-13th gen), Intel Core i9 (11th-12th gen)
                 GPUs: GTX 1650, RTX 2050, RTX 3050, RTX 3050 Ti, RTX 3060, RTX 3070, RTX 3070 Ti, RTX 3080, RTX 3080 Ti
 
                 Extract and map these requirements to the following laptop specification format:
                 - Only extract Intel CPUs and Nvidia (RTX/GTX) GPUs. If the requirement is not Intel or Nvidia, set the value to None.
-                - For Intel CPUs (e.g., Intel Core i5 9600K), use the format: Intel Core i5 9th Gen.
                 - For RTX and GTX GPUs, use the format: RTX 3060, GTX 1660, etc.
+                - If the game needs specific hardware not in our dataset, choose the closest possible match for example (RTX 2070 -> RTX 3050)
                 - If the game requires hardware worse than our minimum spec laptops, set the value to our minimum spec hardware.
-                - If the game needs specific hardware not in our dataset, choose the closest possible match for example (RTX 2070 -> RTX 3050) and also if cpu is for example i5 9th gen -> i5 10th gen.
 
             """
             game_specific_filters = structured_llm.invoke(mapping_prompt)
             return Command(
-                update={"game_system_requirements": game_specific_filters.model_dump()},
+                update={
+                    "game_system_requirements": recc_game_requirements,
+                    "game_specific_filters": game_specific_filters.model_dump(),
+                },
                 goto="get_filtered_laptops",
             )
         except GameNotFound as e:
@@ -192,10 +192,8 @@ def build_graph(provider: str = "groq"):
         """Filter laptops based on user criteria."""
         classification = state.get("classification", {})
         game_requirements = state.get("game_specific_filters", {})
-        filters = classification.get("filters", {})
+        filters = classification.get("filters") or {}
 
-        if isinstance(game_requirements, dict) and game_requirements.get("cpu"):
-            filters["cpu"] = game_requirements["cpu"]
         if isinstance(game_requirements, dict) and game_requirements.get("ram"):
             filters["ram"] = game_requirements["ram"]
         if isinstance(game_requirements, dict) and game_requirements.get("gpu"):
@@ -265,7 +263,6 @@ def build_graph(provider: str = "groq"):
             {user_context}
 
             Here is the context about the game  recommended system requirements:
-            f"CPU: {game_requirements["cpu"]}\n"
             f"GPU: {game_requirements["gpu"]}\n"
             f"RAM: {game_requirements["ram"]}\n\n"
 
