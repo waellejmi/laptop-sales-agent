@@ -1,15 +1,16 @@
 from agent import build_graph
 
+walfred = build_graph(provider="groq")
+config = {"configurable": {"thread_id": "test_session_1"}}
+
 
 def test_agent(user_input: str):
-    walfred = build_graph(provider="groq")
-
-    config = {"configurable": {"thread_id": "test_session_1"}}
-
     initial_state = {
         "user_input": user_input,
         "classification": None,
         "filtered_laptops": None,
+        "game_specific_filters": None,
+        "game_system_requirements": None,
         "recommended_laptops": None,
         "final_response": None,
         "messages": [],
@@ -20,12 +21,11 @@ def test_agent(user_input: str):
 
 
 def test_agent_with_streaming(user_input: str):
-    walfred = build_graph(provider="groq")
-    config = {"configurable": {"thread_id": "test_session_1"}}
-
     initial_state = {
         "user_input": user_input,
         "classification": None,
+        "game_system_requirements": None,
+        "game_specific_filters": None,
         "filtered_laptops": None,
         "recommended_laptops": None,
         "final_response": None,
@@ -49,6 +49,14 @@ def test_agent_with_streaming(user_input: str):
         classification = node_state.get("classification")
         if classification:
             print(f"Classification: {classification}")
+
+        game_system_requirements = node_state.get("game_system_requirements")
+        if game_system_requirements is not None:
+            if isinstance(game_system_requirements, dict):
+                print(f"Game System Requirements: {game_system_requirements} ")
+            game_specific_filters = node_state.get("game_specific_filters")
+            if isinstance(game_specific_filters, dict):
+                print(f"Game Specific Filters: {game_specific_filters} ")
 
         filtered = node_state.get("filtered_laptops")
         if filtered is not None:
@@ -75,7 +83,7 @@ def test_agent_with_streaming(user_input: str):
 
 if __name__ == "__main__":
     print("# TEST 1: Gaming Laptop")
-    test_agent(
+    test_agent_with_streaming(
         "I need the best gaming laptop under 3000 euros. I need to play the latest games in 4K smoothly"
     )
 
@@ -96,3 +104,7 @@ if __name__ == "__main__":
     test_agent(
         "أريد لابتوب للألعاب"
     )  # "orid laptop lel al3ab" in arabic means i want a laptop for gaming in case you dont have an arabic font in your system (my nvim does not support it and I am lazy to add it)
+    print("# TEST 6: Specific Game + filters ")
+    test_agent_with_streaming(
+        " There is a game called 'factorio', i have a budget of 500 euros which pc should i get? btw i really want asus ah i heard they are very relaible "
+    )

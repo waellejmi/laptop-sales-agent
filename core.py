@@ -1,10 +1,14 @@
 from filter import filter_laptops
 from scoring import compute_scores, get_weights
 
+# This is basically what the agent is doing but just in automated process
+
 filter = filter_laptops(
-    model_name="Asus",
-    price_euro=2000,
-    resolution_type="4K",
+    # model_name="Asus",
+    # price_euro=500,
+    # resolution_type="4K",
+    gpu="rx 5500",
+    sort_by_gpu_tier=True,
 )
 
 

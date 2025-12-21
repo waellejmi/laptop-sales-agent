@@ -21,8 +21,8 @@ def filter_laptops(
     resolution_w: int | None = None,
     resolution_h: int | None = None,
     resolution_type: str | None = None,
-    spec_score: int | None = None,
     price_euro: float | None = None,
+    sort_by_gpu_tier: bool = False,
     # sort_by: str | None = None,
     # top_k: int | None = None,
     dataset_path: str = "./data/laptops_enhanced.csv",
@@ -40,7 +40,14 @@ def filter_laptops(
     if cpu:
         mask = mask & (df["cpu"].str.contains(cpu, case=False))
     if gpu:
-        mask = mask & (df["gpu"].str.contains(gpu, case=False))
+        gpu_loc = df["gpu"].str.contains(gpu, case=False)
+        if sort_by_gpu_tier:
+            gpu_row = df[gpu_loc]
+            gpu_tier_value = gpu_row["gpu_tier"].iloc[0]
+            mask = mask & (df["gpu_tier"] >= gpu_tier_value)
+        else:
+            mask = mask & gpu_loc
+
     if os:
         mask = mask & (df["os"].str.contains(os, case=False))
     # Exact matching : brand ,resolution_type

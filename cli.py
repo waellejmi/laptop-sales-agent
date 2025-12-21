@@ -2,6 +2,7 @@
 import sys
 
 from agent import build_graph
+from tests import test_agent_with_streaming
 
 
 def run_cli(debug=False):
@@ -43,6 +44,8 @@ def run_cli(debug=False):
         initial_state = {
             "user_input": user_input,
             "classification": None,
+            "game_system_requirements": None,
+            "game_specific_filters": None,
             "filtered_laptops": None,
             "recommended_laptops": None,
             "final_response": None,
@@ -51,9 +54,7 @@ def run_cli(debug=False):
 
         try:
             if debug:
-                for event in walfred.stream(initial_state, config):
-                    node_name = list(event.keys())[0]
-                    print(f"[DEBUG] Executing: {node_name}")
+                test_agent_with_streaming(user_input)
             else:
                 walfred.invoke(initial_state, config)
 

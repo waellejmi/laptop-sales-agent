@@ -34,7 +34,7 @@ class LaptopSpecification(BaseModel):
     resolution_w: Optional[int] = None
     resolution_h: Optional[int] = None
     resolution_type: Optional[str] = None
-    spec_score: Optional[int] = None
+    sort_by_gpu_tier: Optional[bool] = False
     price_euro: Optional[float] = None
 
 
@@ -151,7 +151,6 @@ def build_graph(provider: str = "groq"):
         game_name = classification.get("specific_game", "")
         try:
             recc_game_requirements = get_system_requirements(game_name)
-            # state.update(game_system_requirements=recc_game_requirements)
             structured_llm = llm.with_structured_output(GameSpecification)
 
             mapping_prompt = f"""
@@ -198,6 +197,7 @@ def build_graph(provider: str = "groq"):
             filters["ram"] = game_requirements["ram"]
         if isinstance(game_requirements, dict) and game_requirements.get("gpu"):
             filters["gpu"] = game_requirements["gpu"]
+            filters["sort_by_gpu_tier"] = True
         try:
             filtered_laptops_df = filter_laptops(**filters)
             if filtered_laptops_df.empty:
