@@ -150,7 +150,14 @@ def build_graph(provider: str = "groq"):
         classification = state.get("classification", {})
         game_name = classification.get("specific_game", "")
         try:
-            recc_game_requirements = get_system_requirements(game_name)
+            try:
+                # we first look online, because it faster than querying this 80K entry we have
+                recc_game_requirements = get_system_requirements(game_name, online=True)
+            except GameNotFound:
+                # if it fails we check the local db plus local db have only minimum requirments
+                recc_game_requirements = get_system_requirements(
+                    game_name, online=False
+                )
             structured_llm = llm.with_structured_output(GameSpecification)
 
             mapping_prompt = f"""
@@ -163,10 +170,10 @@ def build_graph(provider: str = "groq"):
                 GPUs: GTX 1650, RTX 2050, RTX 3050, RTX 3050 Ti, RTX 3060, RTX 3070, RTX 3070 Ti, RTX 3080, RTX 3080 Ti
 
                 Extract and map these requirements to the following laptop specification format:
-                - Only extract Intel CPUs and Nvidia (RTX/GTX) GPUs. If the requirement is not Intel or Nvidia, set the value to None.
+                - Only extract Nvidia (RTX/GTX) GPUs. If the requirement is worse than out minimum GPU (GTX 1650 in this case), set the value to GTX 1650.
                 - For RTX and GTX GPUs, use the format: RTX 3060, GTX 1660, etc.
                 - If the game needs specific hardware not in our dataset, choose the closest possible match for example (RTX 2070 -> RTX 3050)
-                - If the game requires hardware worse than our minimum spec laptops, set the value to our minimum spec hardware.
+                - If the game requires hardware worse than our minimum spec laptops, set the value to our minimum spec hardware (GTX 1650).
 
             """
             game_specific_filters = structured_llm.invoke(mapping_prompt)
@@ -264,6 +271,7 @@ def build_graph(provider: str = "groq"):
 
             Here is the context about the game  recommended system requirements:
             f"GPU: {game_requirements["gpu"]}\n"
+            f"CPU: {game_requirements["cpu"]}\n\n"
             f"RAM: {game_requirements["ram"]}\n\n"
 
             """

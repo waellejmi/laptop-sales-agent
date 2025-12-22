@@ -17,7 +17,7 @@ def game_normalize(text) -> str:
 
 def title_normalize(text) -> str:
     # s = text.lower().strip()
-    parts = text.split("system requirements", 1)
+    parts = re.split(r"system requirements", text, flags=re.IGNORECASE)
     return parts[0].strip() if len(parts) > 1 else text
 
 
@@ -70,10 +70,11 @@ def scrape_from_srl(url: str) -> str:
         return f"Error fetching system requirements: {str(e)}"
 
 
-def get_system_requirements(game_name: str):
+def online_lookup(game_name: str):
     try:
         results = search_web(game_name)
         result, score, id = best_match(game_name, results)
+        print("Found an online match:")
         print(result, score, id)
         output = scrape_from_srl(results[id]["link"])
         cpu = re.search(r"CPU\s*: (.+)", output)
@@ -94,7 +95,49 @@ def get_system_requirements(game_name: str):
         raise e
 
 
+def local_lookup(
+    game_name: str,
+    dataset_path: str = "./data/games-system-requirements/game_db.csv",
+) -> Dict[str, str]:
+    import pandas as pd
+
+    try:
+        db = pd.read_csv(dataset_path)
+        game_name_norm = game_normalize(game_name)
+        best_score = 0
+        best_result = None
+        best_index = -1
+        for idx, row in db.iterrows():
+            title = str(row.get("name", ""))
+            title_norm = title_normalize(title).lower().strip()
+            score = difflib.SequenceMatcher(None, game_name_norm, title_norm).ratio()
+            if score > best_score:
+                best_score = score
+                best_result = row.to_dict()
+                best_index = idx
+        if best_score < 0.4:
+            raise GameNotFound(f"No good local match found for '{game_name}'")
+        print("Found a local match:")
+        print(best_result, best_score, best_index)
+        return {
+            "game_name": title_normalize(best_result.get("name", "")),
+            "cpu": best_result.get("cpu", "").strip(),
+            "gpu": best_result.get("gpu", "").strip(),
+            "ram": best_result.get("ram", "").strip(),
+        }
+
+    except GameNotFound as e:
+        raise e
+
+
+def get_system_requirements(game_name: str, online: bool = True) -> Dict[str, str]:
+    if online:
+        return online_lookup(game_name)
+    return local_lookup(game_name)
+
+
 if __name__ == "__main__":
-    game_name = "the finals"
-    print(search_web(game_name))
+    game_name = "Hogwarts Lgac"
+    print(local_lookup(game_name))
+    print(online_lookup(game_name))
     # print(get_system_requirements(game_name))
