@@ -107,19 +107,20 @@ class SalesAgent:
             )
         self._game_db_path: Optional[str] = None
         self._laptop_db_path: Optional[str] = None
+        self.server_params = StdioServerParameters(
+            command="python", args=["mcp_server.py"]
+        )
 
     # MCP SETup
-
     async def _get_resource_path_from_session(self, session, uri: str) -> str:
         result = await session.read_resource(AnyUrl(uri))
-        logger.info(f"Resource info for {uri}: {result.contents}")
-        resource_info = json.loads(result.contents)
+        raw_text = result.contents[0].text
+        logger.info(f"Resource info for {uri}: {raw_text}")
+        resource_info = json.loads(raw_text)
         return resource_info["path"]
 
     async def get_mcp_paths(self):
-        server_params = StdioServerParameters(command="python", args=["mcp_server.py"])
-
-        async with stdio_client(server_params) as (read, write):
+        async with stdio_client(self.server_params) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
 
@@ -128,28 +129,22 @@ class SalesAgent:
                 logger.info("Available MCP Resources:")
                 for resource in resources.resources:
                     logger.info(f"  - {resource.name}: {resource.uri}")
-                    # result = await session.read_resource(AnyUrl(resource.uri))
-                    # logger.info(f"Result: {result.contents}")
-                    # resource_info = json.loads(result.contents)
-                    # resource_info["path"]
-                # self._game_db_path = await self._get_resource_path_from_session(
-                #     session, "file:///data/games-system-requirements/game_db.csv"
-                # )
-                # self._laptop_db_path = await self._get_resource_path_from_session(
-                #     session, "file:///data/laptops_enhanced.csv"
-                # )
+                self._game_db_path = await self._get_resource_path_from_session(
+                    session, "file:///data/games-system-requirements/game_db.csv"
+                )
+                self._laptop_db_path = await self._get_resource_path_from_session(
+                    session, "file:///data/laptops_enhanced.csv"
+                )
 
     async def online_lookup_mcp(self, game_name: str) -> dict:
-        # Create fresh connection for each lookup
-        server_params = StdioServerParameters(command="python", args=["mcp_server.py"])
-
-        async with stdio_client(server_params) as (read, write):
+        async with stdio_client(self.server_params) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 tools = await session.list_tools()
                 logger.info("Available MCP Tools:")
                 for tool in tools.tools:
                     logger.info(f"  - {tool.name}: {tool.description}")
+
                 result = await session.call_tool(
                     "online_lookup", arguments={"game_name": game_name}
                 )
@@ -218,11 +213,12 @@ class SalesAgent:
         try:
             try:
                 # we first look online, because it faster than querying this 80K entry we have
-                # recc_game_requirements = online_lookup(game_name)
-                recc_game_requirements = await self.online_lookup_mcp(game_name)
-                if not recc_game_requirements.get("success"):
+                full_res = await self.online_lookup_mcp(game_name)
+
+                if not full_res.get("success"):
                     raise GameNotFound("Online lookup failed")
-                recc_game_requirements = recc_game_requirements["data"]
+
+                recc_game_requirements = full_res["data"]
             except GameNotFound:
                 # if it fails we check the local db plus local db have only minimum requirments
                 recc_game_requirements = local_lookup(

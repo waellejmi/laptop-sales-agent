@@ -4,7 +4,11 @@ from pathlib import Path
 
 from mcp.server.lowlevel import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import Resource, Tool
+from mcp.types import (
+    Resource,
+    TextContent,  # Ensure this is imported at the top
+    Tool,
+)
 from pydantic import FileUrl
 
 logger = logging.getLogger(__name__)
@@ -36,7 +40,7 @@ async def read_resource(uri: str) -> str:
     uri_str = str(uri)
 
     uri_mapping = {
-        "file:///data/games-system-requirements/game_db.csv": "./mcp_data/games-system-requirements/game_db.csv",
+        "file:///data/games-system-requirements/game_db.csv": "./mcp_data/game_db.csv",
         "file:///data/laptops_enhanced.csv": "./mcp_data/laptops_enhanced.csv",
     }
 
@@ -56,25 +60,40 @@ async def read_resource(uri: str) -> str:
 
 
 @app.call_tool()
-async def online_lookup_mcp(game_name: str) -> dict:
-    from sys_req_lookup_tool import (
-        online_lookup,
-    )
+async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    if name != "online_lookup":
+        raise ValueError(f"Unknown tool: {name}")
+
+    game_name = arguments.get("game_name")
+    if not game_name:
+        raise ValueError("Missing 'game_name' argument")
+
+    from sys_req_lookup_tool import online_lookup as perform_lookup
 
     try:
-        online_result = online_lookup(game_name)
-        return {
-            "success": True,
-            "data": {
-                "game_name": online_result["game_name"],
-                "cpu": online_result["cpu"],
-                "gpu": online_result["gpu"],
-                "ram": online_result["ram"],
-                "source": "online_systemrequirementslab",
-            },
-        }
+        online_result = perform_lookup(game_name)
+        return [
+            TextContent(
+                type="text",
+                text=json.dumps(
+                    {
+                        "success": True,
+                        "data": {
+                            "game_name": online_result["game_name"],
+                            "cpu": online_result["cpu"],
+                            "gpu": online_result["gpu"],
+                            "ram": online_result["ram"],
+                        },
+                    }
+                ),
+            )
+        ]
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return [
+            TextContent(
+                type="text", text=json.dumps({"success": False, "error": str(e)})
+            )
+        ]
 
 
 @app.list_tools()
@@ -83,15 +102,15 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="online_lookup",
             description="Lookup system requirements for a game online from SystemRequirementsLab.",
-            parameters={
+            inputSchema={
                 "type": "object",
+                "required": ["game_name"],
                 "properties": {
                     "game_name": {
                         "type": "string",
                         "description": "The name of the game to look up.",
                     },
                 },
-                "required": ["game_name"],
             },
         )
     ]

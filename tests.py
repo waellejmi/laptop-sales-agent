@@ -1,4 +1,5 @@
 import asyncio
+from time import sleep
 
 from agent import build_graph
 
@@ -17,7 +18,7 @@ async def test_agent(user_input: str):
         "messages": [],
     }
 
-    result = walfred.ainvoke(initial_state, config)
+    result = await walfred.ainvoke(initial_state, config)
     return result
 
 
@@ -83,38 +84,22 @@ async def test_agent_with_streaming(user_input: str):
 
     print(f"\n{'=' * 80}\n")
 
-    # if __name__ == "__main__":
-    #     # Example usage for testing
-    #     async def main():
-    #         await test_agent_with_streaming("i want to play a game called doom")
-    #
-    #     asyncio.run(main())
-
 
 if __name__ == "__main__":
-    print("# TEST 1: Gaming Laptop")
-    test_agent_with_streaming(
-        "I need the best gaming laptop under 3000 euros. I need to play the latest games in 4K smoothly"
-    )
-
-    print("\n # TEST 2: Apple Fanboy")
-    test_agent(
-        "I really like apple eco system, and i would love adding a new laptop, I only do basic web surfing and nothing heavy. What is the best i can get for 1500 euros?"
-    )
-
-    print("\n # TEST 3: Exact Model")
-    test_agent(
-        "I'm searching exactly for this laptop Lenovo IdeaPad Gaming 3 82K201UEIN. Do you have it in your store?"
-    )
-    print("\n # TEST 4: Very Specific Student Needs")
-    test_agent(
-        "I am going to uni this year and I need a lapoptop for taking notes and doing assignments. Money is most important factor for me. I need best price to performance ratio. My budget is 800 euros, i can go a bit higher like 100 extra euro max"
-    )
-    print("\n # TEST 5: MultiLangual Test")
-    test_agent(
-        "أريد لابتوب للألعاب"
-    )  # "orid laptop lel al3ab" in arabic means i want a laptop for gaming in case you dont have an arabic font in your system (my nvim does not support it and I am lazy to add it)
-    print("# TEST 6: Specific Game + filters ")
-    test_agent_with_streaming(
-        " There is a game called 'factorio', i have a budget of 500 euros which pc should i get? btw i really want asus ah i heard they are very relaible "
-    )
+    prompts = [
+        "I need the best gaming laptop under 3000 euros. I need to play the latest games in 4K smoothly",
+        "I'm searching exactly for this laptop Lenovo IdeaPad Gaming 3 82K201UEIN. Do you have it in your store?",
+        "I am going to uni this year and I need a lapoptop for taking notes and doing assignments. Money is most important factor for me. I need best price to performance ratio. My budget is 800 euros, i can go a bit higher like 100 extra euro max",
+        "je veux un ordinateur pour jouer god of war j ai un budget de 1000 euro et je veux un pc asus parceque il sont tres fiable",
+    ]
+    # print("# TEST 1: Gaming Laptop")
+    # asyncio.run(test_agent(prompts[0]))
+    # sleep(2)  # Groq limit rate so i have to slow down. call me sonic
+    print("\n # TEST 2: Exact Model")
+    asyncio.run(test_agent(prompts[1]))
+    sleep(2)  # Groq limit rate so i have to slow down. call me sonic
+    print("\n # TEST 3: Very Specific Student Needs")
+    asyncio.run(test_agent(prompts[2]))
+    sleep(2)  # Groq limit rate so i have to slow down. call me sonic
+    print("\n # TEST 4: MultiLangual Test")
+    asyncio.run(test_agent(prompts[3]))

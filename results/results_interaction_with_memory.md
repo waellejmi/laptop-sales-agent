@@ -1,28 +1,15 @@
 
-================================================================================
-LAPTOP SALES AGENT - Walfred
-================================================================================
-Commands:
-  'quit' or 'q' - Exit
-  'debug' - Toggle debug mode
-  'clear' - Clear screen
-================================================================================
-
-
-You: debug
-
-Debug mode: ON
-
-You: I am a video editor by day. I am looking for a laptop that can handle processing power, I have a very relaxed budget. what should  i get?
-[DEBUG] Executing: read_user_prompt
-[DEBUG] Executing: classify_intent
-[DEBUG] Executing: get_recommended_laptops
-[DEBUG] Executing: explain_reccomandations
+> You: I am a video editor by day. I am looking for a laptop that can handle processing power, I have a very relaxed budget. what should  i get?
 
 ================================================================================
+
 AGENT RESPONSE:
+
 ================================================================================
-<think>
+<details>
+  <summary>Show model thinking</summary>
+
+  <think>
 Okay, let's tackle this query. The user is a video editor with a relaxed budget, so they need a powerful laptop but aren't constrained by price. The three recommended laptops are the Acer Predator Helios 500, Apple MacBook Pro 14", and MacBook Pro 16".
 
 First, I need to break down each laptop's specs and see how they meet the needs of a video editor. Video editing requires high CPU performance, good GPU for rendering, ample RAM, and fast storage.
@@ -38,7 +25,10 @@ The user mentioned a relaxed budget, so the Acer is the most expensive but offer
 I should also note the operating system differences. macOS has optimized software for video editing, which could be a significant factor. The Acer runs Windows, which might offer more flexibility with software and hardware upgrades. The user should consider which OS they're more comfortable with.
 
 In conclusion, the Acer is the powerhouse with the best GPU and more RAM, suitable for heavy editing. The MacBook Pros offer a premium build and macOS integration. The user should weigh the ecosystem benefits against the raw specs and their personal workflow.
-</think>
+
+  </think>
+
+</details>
 
 Here’s a detailed breakdown of why these laptops are suitable for a video editor with a relaxed budget, along with their strengths and trade-offs:
 
@@ -128,21 +118,20 @@ Here’s a detailed breakdown of why these laptops are suitable for a video edit
 - **Best Value:** **14" MacBook Pro** (cheapest option with strong CPU/GPU for most video editing tasks).
 
 **Final Tip:** If you’re already in the Apple ecosystem or rely on macOS-specific tools, the MacBook Pro is a solid choice. Otherwise, the Acer’s RTX 3080 and 64GB RAM make it the best for GPU-heavy workflows.
-================================================================================
-
-[DEBUG] Executing: send_reply
-
-You: get  me the best apple laptop
-[DEBUG] Executing: read_user_prompt
-[DEBUG] Executing: classify_intent
-[DEBUG] Executing: get_filtered_laptops
-[DEBUG] Executing: get_recommended_laptops
-[DEBUG] Executing: explain_reccomandations
 
 ================================================================================
+ 
+You : Yes I really like the apple ecosystem, what is the best apple laptop i can get?
+
+================================================================================
+
 AGENT RESPONSE:
+
 ================================================================================
-<think>
+<details>
+  <summary>Show model thinking</summary>
+
+  <think>
 Okay, let's see. The user wants the best Apple laptop. I need to analyze the three recommended models and explain why they're suitable. First, I should look at the specs provided for each laptop.
 
 The first one is the MacBook Pro 14-inch with M2 Max 12-core CPU, 32GB RAM, 1TB SSD, 30-core GPU. The second is the 16-inch MK1A3HN with M1 Max 10-core CPU, 32GB RAM, 1TB SSD, 32-core GPU. The third is another 16-inch model with M2 Max 12-core CPU, 32GB RAM, 1TB SSD, 38-core GPU. All have high spec scores and are Apple products, so that's good.
@@ -158,8 +147,10 @@ The final scores take into account normalized CPU, GPU, RAM, and price. The firs
 Also, the screen size might matter. The 16-inch models have larger screens with higher resolution, which could be better for some users. But if portability is a concern, the 14-inch is smaller.
 
 So, the explanation should highlight the strengths of each model. The first is the best balance, the third has the best GPU but higher price, and the second is an older model with M1 Max. The user should consider their priorities: latest tech, GPU power, screen size, or budget.
-</think>
 
+  </think>
+
+</details>
 The three recommended Apple laptops are all high-performance options tailored for users seeking top-tier Apple hardware. Here's a detailed breakdown of their strengths and why they might suit the user's needs:
 
 ---
@@ -226,9 +217,9 @@ The three recommended Apple laptops are all high-performance options tailored fo
 ---
 
 ### **Final Notes**
-All three laptops are excellent for Apple users seeking high performance. The **14-inch M2 Max** is likely the best default choice for most users, but the 16-inch models offer advantages depending on screen size and GPU needs. The user should weigh their budget against their specific workflow requirements (e.g., GPU vs. CPU, portability vs. screen size).
-================================================================================
 
-[DEBUG] Executing: send_reply
+All three laptops are excellent for Apple users seeking high performance. The **14-inch M2 Max** is likely the best default choice for most users, but the 16-inch models offer advantages depending on screen size and GPU needs. The user should weigh their budget against their specific workflow requirements (e.g., GPU vs. CPU, portability vs. screen size).
+
+================================================================================
 
 You:quit
