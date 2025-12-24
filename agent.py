@@ -146,7 +146,7 @@ def build_graph(provider: str = "groq"):
 
     def get_game_requirements(
         state: SalesAgentState,
-    ) -> Command[Literal["get_filtered_laptops"]]:
+    ) -> Command[Literal["get_filtered_laptops", "inform_user_no_laptops"]]:
         classification = state.get("classification", {})
         game_name = classification.get("specific_game", "")
         try:
@@ -233,7 +233,7 @@ def build_graph(provider: str = "groq"):
         classification = state.get("classification", {})
         usage_profile = classification.get("usage_profile", "basic")
         user_emphasis = classification.get("user_emphasis", [])
-        filtered_laptops = state.get("filtered_laptops", pd.DataFrame())
+        filtered_laptops = state.get("filtered_laptops", list[dict])
 
         profile_weights = get_weights(usage_profile, user_emphasis)
 
@@ -270,9 +270,9 @@ def build_graph(provider: str = "groq"):
             {user_context}
 
             Here is the context about the game  recommended system requirements:
-            f"GPU: {game_requirements["gpu"]}\n"
-            f"CPU: {game_requirements["cpu"]}\n\n"
-            f"RAM: {game_requirements["ram"]}\n\n"
+            GPU: {game_requirements["gpu"]}\n
+            CPU: {game_requirements["cpu"]}\n
+            RAM: {game_requirements["ram"]}\n
 
             """
         else:

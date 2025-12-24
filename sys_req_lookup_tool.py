@@ -1,10 +1,14 @@
 import difflib
+import logging
 import re
 from typing import Dict
 
 import requests
 from bs4 import BeautifulSoup
 from langchain_community.tools import DuckDuckGoSearchResults
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 class GameNotFound(Exception):
@@ -74,8 +78,8 @@ def online_lookup(game_name: str):
     try:
         results = search_web(game_name)
         result, score, id = best_match(game_name, results)
-        print("Found an online match:")
-        print(result, score, id)
+        logger.info("Found an online match:")
+        logger.info(f"Best result: {result}, Score: {score}, Index: {id}")
         output = scrape_from_srl(results[id]["link"])
         cpu = re.search(r"CPU\s*: (.+)", output)
         ram = re.search(r"RAM\s*: (.+)", output)
@@ -102,6 +106,7 @@ def local_lookup(
     import pandas as pd
 
     try:
+        logger.info(f"Loading local dataset from {dataset_path}")
         db = pd.read_csv(dataset_path)
         game_name_norm = game_normalize(game_name)
         best_score = 0
@@ -117,8 +122,10 @@ def local_lookup(
                 best_index = idx
         if best_score < 0.4:
             raise GameNotFound(f"No good local match found for '{game_name}'")
-        print("Found a local match:")
-        print(best_result, best_score, best_index)
+        logger.info("Found a local match:")
+        logger.info(
+            f"Best result: {best_result}, Score: {best_score}, Index: {best_index}"
+        )
         return {
             "game_name": title_normalize(best_result.get("name", "")),
             "cpu": best_result.get("cpu", "").strip(),

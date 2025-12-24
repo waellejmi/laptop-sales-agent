@@ -6,7 +6,7 @@ from tests import test_agent_with_streaming
 
 
 def run_cli(debug=False):
-    walfred = build_graph(provider="groq")
+    walfred = build_graph()
 
     print("=" * 80)
     print("LAPTOP SALES AGENT - Walfred")

@@ -1,5 +1,5 @@
 TODO.md
 data/
 __pycache__/
-*.ipynb
 .env
+mcp_data/
