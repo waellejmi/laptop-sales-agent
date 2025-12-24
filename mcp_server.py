@@ -6,7 +6,7 @@ from mcp.server.lowlevel import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import (
     Resource,
-    TextContent,  # Ensure this is imported at the top
+    TextContent,
     Tool,
 )
 from pydantic import FileUrl

@@ -1,119 +1,71 @@
 # Laptop Sales Agent
 
-## Overview
+As the computer guy of the family, everyone who is buying a laptop ends up calling me and asking which brand or model to get. That is fair. Laptops are genuinely confusing for non-technical people, and specs alone do not explain whether a device actually fits someone’s needs.
 
-This agent analyzes customer requirements in natural language and recommends the top 3 most suitable laptops from a database. It provides detailed reasoning for each recommendation based on usage profiles, technical specifications, and customer preferences.
+This project was my way of turning that recurring situation into a recommendation system, while also introducing myself to recommender systems where there is no prior customer knowledge.
 
-## Features
+## Core Approach
 
-- **Natural Language Processing**: Understands customer needs expressed conversationally
-- **Smart Classification**: Automatically detects usage profiles (gaming, student, workstation, basic)
-- **Intelligent Filtering**: Applies hard filters (brand, price, specs) when specified
-- **Profile-Based Scoring**: Uses weighted scoring system tailored to four usage profiles
-- **Reasoning Generation**: Provides clear explanations for each recommendation
-- **Memory Persistence**: Maintains conversation context across interactions
+The user simply explains what they want in natural language.  
+The LLM maps that input to:
+- a usage profile selected from a fixed set
+- optional emphasis to adjust scoring priorities
+- hard constraints such as budget, brand, or screen size
 
-
-## Example Query
-
-- "I am going to uni this year and I need a laptop for taking notes and doing assignments. Money is most important factor for me. I need best price to performance ratio. My budget is 800 euros, i can go a bit higher like 100 extra euro max"
-
-> You can see the result in [TEST 4: Very Specific Student Needs](https://github.com/waellejmi/laptop-sales-agent/blob/main/results/more_results.md) 
+Each laptop is then scored using profile-specific weights, rather than generic ranking logic.
 
 
-## Usage Profiles
+## Profiles and Filtering
 
-The agent supports four distinct profiles with different component priorities:
+Supported profiles include gaming, student, basic/office, and workstation.  
+Hard filters are applied only when explicitly mentioned, ensuring flexibility without ignoring user constraints.
 
-- **Gaming**: GPU-focused (45% GPU, 30% CPU)
-- **Student**: Budget-conscious with balanced performance (40% CPU, 20% price)
-- **Basic/Office**: General use, integrated GPU sufficient (35% CPU, 25% RAM)
-- **Workstation**: CPU and RAM intensive (55% CPU, 20% RAM)
+## Game-Aware Matching
 
+I added a fun but practical feature for gaming use cases:
+- If the user mentions a game, the agent searches the web and scrapes system requirements
+- If scraping fails, it falls back to a local dataset
+- As a final fallback, it uses a large Kaggle game requirements database with ~80k entries
 
-## Installation
+The extracted requirements are compared directly against the laptop database to ensure smooth gameplay.
 
-1. Clone the repository
-2. Install dependencies:
-```bash
-uv sync
-```
+## Orchestration and MCP
 
-3. Create a `.env` file in the project root:
-```env
-GROQ_KEY=groq_api_key_here
-HF_TOKEN=huggingface_token_here  # Optional
-```
+The entire flow is orchestrated using LangGraph.
 
+Later, I decided to integrate MCP, mostly out of curiosity. This definitely overcomplicated a simple app, but it was worth it as a learning exercise. MCP allowed:
+- databases to be exposed as resources
+- tools to be decoupled from agent logic
+- easier future expansion without code changes
 
-## Usage
+Two resources were added: the laptop database and the local game requirements database.  
+The online search tool was moved to an MCP tool.
 
-### Interactive CLI
+The MCP server runs over stdio to reduce networking overhead since everything is local.
 
-Run the interactive command-line interface:
+This required refactoring a significant portion of the codebase, but seeing the full system working end to end made it worthwhile.
 
-```bash
-python cli.py
-```
+For a fully working version without MCP, see the older commit labeled **Small fixup.”**
 
-### Programmatic Testing
+## Examples and Results
 
-Run predefined test scenarios:
+You can find example prompts and outputs [here](https://github.com/waellejmi/laptop-sales-agent/tree/main/results)  
 
-```bash
-python tests.py
-```
+## Trying It Out
 
-## Project Structure
+If you want to run it locally:
+- Create a `.env` file and set a `GROQ_KEY` API key  
+- HuggingFace key is optional
+- Run `uv sync`
+- Start the CLI
 
-```
-.
-├── agent.py              # Main agent implementation (LangGraph workflow)
-├── filter.py             # Laptop filtering logic
-├── scoring.py            # Scoring system and weight definitions
-├── cli.py                # Interactive CLI interface
-├── tests.py               # Test suite
-├── data/
-│   └── laptops_enhanced.csv  # Preprocessed laptop database
-├── .env                  # API keys (create this file)
-└── pyproject.toml     # Python dependencies
-```
+## Datasets
 
-## How It Works
+Laptop dataset (enhanced):  
+https://www.kaggle.com/datasets/waellejmi/laptops-specificaitons-enhanced/data
 
-1. **User Input**: Customer describes their needs in natural language
-2. **Classification**: LLM extracts usage profile, emphasis, and filters
-3. **Filtering**: Applies hard filters if specified (brand, price, specs)
-4. **Scoring**: Calculates weighted scores based on detected profile
-5. **Ranking**: Returns top 3 laptops sorted by score
-6. **Explanation**: LLM generates personalized reasoning for recommendations
+Original dataset source:  
+https://www.kaggle.com/datasets/sushmita36/laptops-dataset
 
-## Dataset
-
-The agent uses a preprocessed laptop database with normalized scores for:
-- CPU performance tiers
-- GPU performance tiers
-- RAM capacity
-- Price (inverted normalization)
-- SSD presence
-
-Original kaggle dataset source: [Laptops Dataset](https://www.kaggle.com/datasets/sushmita36/laptops-dataset)
-
-My modified version: [Laptops Specificaitons Dataset](https://www.kaggle.com/datasets/waellejmi/laptops-specificaitons-enhanced/data).
-
-## Error Handling
-
-The agent gracefully handles:
-- No matching laptops (suggests adjusting criteria)
-- Invalid filters or specifications
-- API failures (fallback to TinyLlama)
-- Empty or malformed inputs
-
-
-### Technical Stack
-
-- **LangGraph**: Orchestrates the agent workflow
-- **Groq API**: Qwen3-32B model for LLM operations
-- **HuggingFace**: TinyLlama fallback model
-- **Pandas**: Data processing and filtering
-- **Pydantic**: Structured output validation
+Game requirements dataset (fallback):  
+https://www.kaggle.com/datasets/hatoonaloqaily/steam-system-requirements-dataset
