@@ -8,6 +8,7 @@ dependencies = [
     "pandas",
     "python-dotenv",
     "beautifulsoup4",
+    "mcp[cli]",
     "ddgs",
     "langchain_community",
     "pydantic",

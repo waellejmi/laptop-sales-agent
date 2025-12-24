@@ -1,12 +1,13 @@
 # cli.py
+import asyncio
 import sys
 
 from agent import build_graph
 from tests import test_agent_with_streaming
 
 
-def run_cli(debug=False):
-    walfred = build_graph()
+async def run_cli(debug=False):
+    walfred = await build_graph()
 
     print("=" * 80)
     print("LAPTOP SALES AGENT - Walfred")
@@ -54,9 +55,9 @@ def run_cli(debug=False):
 
         try:
             if debug:
-                test_agent_with_streaming(user_input)
+                await test_agent_with_streaming(user_input)
             else:
-                walfred.invoke(initial_state, config)
+                await walfred.ainvoke(initial_state, config)
 
         except Exception as e:
             print(f"\nError: {str(e)}")
@@ -68,4 +69,4 @@ def run_cli(debug=False):
 
 if __name__ == "__main__":
     debug_mode = "--debug" in sys.argv
-    run_cli(debug=debug_mode)
+    asyncio.run(run_cli(debug=debug_mode))

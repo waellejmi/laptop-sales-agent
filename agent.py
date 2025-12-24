@@ -1,3 +1,5 @@
+import json
+import logging
 import os
 from typing import Annotated, Any, Literal, Optional, TypedDict
 
@@ -9,13 +11,25 @@ from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph, add_messages
 from langgraph.types import Command
+
+# MCP imports
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+from mcp.types import AnyUrl
 from pydantic import BaseModel
 
 from filter import filter_laptops
 from scoring import compute_scores, get_weights
-from sys_req_lookup_tool import GameNotFound, get_system_requirements
+from sys_req_lookup_tool import (
+    GameNotFound,
+    local_lookup,
+)
 
 load_dotenv()
+
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 class LaptopSpecification(BaseModel):
@@ -70,27 +84,79 @@ class SalesAgentState(TypedDict):
     messages: Annotated[list[AnyMessage], add_messages]
 
 
-def build_graph(provider: str = "groq"):
-    if provider == "groq":
-        GROQ_API_KEY = os.getenv("GROQ_KEY")
-        llm = ChatGroq(model="qwen/qwen3-32b", api_key=GROQ_API_KEY, temperature=0.5)
-    elif provider == "huggingface":
-        HF_TOKEN = os.getenv("HF_TOKEN")
-        llm = ChatHuggingFace(
-            llm=HuggingFaceEndpoint(
-                repo_id="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
-                task="text-generation",
-                max_new_tokens=1024,
-                do_sample=False,
-                repetition_penalty=1.03,
-                temperature=0.5,
-                huggingfacehub_api_token=HF_TOKEN,
-            ),
-            verbose=True,
-        )
+class SalesAgent:
+    def __init__(self, provider: str = "groq"):
+        if provider == "groq":
+            GROQ_API_KEY = os.getenv("GROQ_KEY")
+            self.llm = ChatGroq(
+                model="qwen/qwen3-32b", api_key=GROQ_API_KEY, temperature=0.5
+            )
+        elif provider == "huggingface":
+            HF_TOKEN = os.getenv("HF_TOKEN")
+            self.llm = ChatHuggingFace(
+                llm=HuggingFaceEndpoint(
+                    repo_id="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+                    task="text-generation",
+                    max_new_tokens=1024,
+                    do_sample=False,
+                    repetition_penalty=1.03,
+                    temperature=0.5,
+                    huggingfacehub_api_token=HF_TOKEN,
+                ),
+                verbose=True,
+            )
+        self._game_db_path: Optional[str] = None
+        self._laptop_db_path: Optional[str] = None
 
-    def read_user_prompt(state: SalesAgentState) -> dict:
-        """Extract and parse content here i need to add an input fucntion"""
+    # MCP SETup
+
+    async def _get_resource_path_from_session(self, session, uri: str) -> str:
+        result = await session.read_resource(AnyUrl(uri))
+        logger.info(f"Resource info for {uri}: {result.contents}")
+        resource_info = json.loads(result.contents)
+        return resource_info["path"]
+
+    async def get_mcp_paths(self):
+        server_params = StdioServerParameters(command="python", args=["mcp_server.py"])
+
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+
+                resources = await session.list_resources()
+                logger.info("MCP CONNECTED")
+                logger.info("Available MCP Resources:")
+                for resource in resources.resources:
+                    logger.info(f"  - {resource.name}: {resource.uri}")
+                    # result = await session.read_resource(AnyUrl(resource.uri))
+                    # logger.info(f"Result: {result.contents}")
+                    # resource_info = json.loads(result.contents)
+                    # resource_info["path"]
+                # self._game_db_path = await self._get_resource_path_from_session(
+                #     session, "file:///data/games-system-requirements/game_db.csv"
+                # )
+                # self._laptop_db_path = await self._get_resource_path_from_session(
+                #     session, "file:///data/laptops_enhanced.csv"
+                # )
+
+    async def online_lookup_mcp(self, game_name: str) -> dict:
+        # Create fresh connection for each lookup
+        server_params = StdioServerParameters(command="python", args=["mcp_server.py"])
+
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                tools = await session.list_tools()
+                logger.info("Available MCP Tools:")
+                for tool in tools.tools:
+                    logger.info(f"  - {tool.name}: {tool.description}")
+                result = await session.call_tool(
+                    "online_lookup", arguments={"game_name": game_name}
+                )
+                return json.loads(result.content[0].text)
+
+    # Agent logic and nodes
+    def read_user_prompt(self, state: SalesAgentState) -> dict:
         # maybe i add read from a text file or live from a cli
         return {
             "messages": [
@@ -99,6 +165,7 @@ def build_graph(provider: str = "groq"):
         }
 
     def classify_intent(
+        self,
         state: SalesAgentState,
     ) -> Command[
         Literal[
@@ -108,9 +175,7 @@ def build_graph(provider: str = "groq"):
             "inform_user_gibberish",
         ]
     ]:
-        """Use LLM to parse user prompt to get his usage profile, his emphasis and hard filters."""
-
-        structured_llm = llm.with_structured_output(UserRequestClassification)
+        structured_llm = self.llm.with_structured_output(UserRequestClassification)
 
         classification_prompt = f"""
         Your are AI Laptop Sales Assistant.
@@ -144,7 +209,8 @@ def build_graph(provider: str = "groq"):
             update={"classification": classification.model_dump()}, goto=goto
         )
 
-    def get_game_requirements(
+    async def get_game_requirements(
+        self,
         state: SalesAgentState,
     ) -> Command[Literal["get_filtered_laptops", "inform_user_no_laptops"]]:
         classification = state.get("classification", {})
@@ -152,13 +218,17 @@ def build_graph(provider: str = "groq"):
         try:
             try:
                 # we first look online, because it faster than querying this 80K entry we have
-                recc_game_requirements = get_system_requirements(game_name, online=True)
+                # recc_game_requirements = online_lookup(game_name)
+                recc_game_requirements = await self.online_lookup_mcp(game_name)
+                if not recc_game_requirements.get("success"):
+                    raise GameNotFound("Online lookup failed")
+                recc_game_requirements = recc_game_requirements["data"]
             except GameNotFound:
                 # if it fails we check the local db plus local db have only minimum requirments
-                recc_game_requirements = get_system_requirements(
-                    game_name, online=False
+                recc_game_requirements = local_lookup(
+                    game_name, path=self._game_db_path
                 )
-            structured_llm = llm.with_structured_output(GameSpecification)
+            structured_llm = self.llm.with_structured_output(GameSpecification)
 
             mapping_prompt = f"""
                 Given the following recommended system requirements for the game {recc_game_requirements["game_name"]}:
@@ -193,9 +263,9 @@ def build_graph(provider: str = "groq"):
             )
 
     def get_filtered_laptops(
+        self,
         state: SalesAgentState,
     ) -> Command[Literal["get_recommended_laptops", "inform_user_no_laptops"]]:
-        """Filter laptops based on user criteria."""
         classification = state.get("classification", {})
         game_requirements = state.get("game_specific_filters", {})
         filters = classification.get("filters") or {}
@@ -206,7 +276,10 @@ def build_graph(provider: str = "groq"):
             filters["gpu"] = game_requirements["gpu"]
             filters["sort_by_gpu_tier"] = True
         try:
-            filtered_laptops_df = filter_laptops(**filters)
+            # filtered_laptops_df = filter_laptops(**filters)
+            filtered_laptops_df = filter_laptops(
+                dataset_path=self._laptop_db_path, **filters
+            )
             if filtered_laptops_df.empty:
                 return Command(
                     update={"filtered_laptops": []}, goto="inform_user_no_laptops"
@@ -226,10 +299,9 @@ def build_graph(provider: str = "groq"):
             )
 
     def get_recommended_laptops(
+        self,
         state: SalesAgentState,
     ) -> Command[Literal["explain_reccomandations"]]:
-        """Apply user pofile and emphasis to recommend laptops."""
-
         classification = state.get("classification", {})
         usage_profile = classification.get("usage_profile", "basic")
         user_emphasis = classification.get("user_emphasis", [])
@@ -251,9 +323,9 @@ def build_graph(provider: str = "groq"):
         )
 
     def explain_reccomandations(
+        self,
         state: SalesAgentState,
     ) -> Command[Literal["send_reply"]]:
-        """Generate a final response explaining the recommendations to the user."""
         reccomended_laptops = state.get("recommended_laptops", [])
         user_context = state.get("user_input", "")
         game_requirements = state.get("game_system_requirements", {})
@@ -287,15 +359,15 @@ def build_graph(provider: str = "groq"):
             {user_context}
             """
 
-        explanation = llm.invoke(explanation_prompt)
+        explanation = self.llm.invoke(explanation_prompt)
 
         return Command(
             update={"final_response": explanation.content},
             goto="send_reply",
         )
 
+    @staticmethod
     def inform_user_no_laptops(state: SalesAgentState) -> dict:
-        """Inform the user that no laptops matched their criteria."""
         return {
             "final_response": (
                 "Unfortunately, no laptops match your specified criteria in our database."
@@ -303,8 +375,8 @@ def build_graph(provider: str = "groq"):
             )
         }
 
+    @staticmethod
     def inform_user_gibberish(state: SalesAgentState) -> dict:
-        """Inform the user he is talking out of context."""
         return {
             "final_response": (
                 "Unfortunately, we did not understand your request. Please stay on topic of laptops."
@@ -312,8 +384,8 @@ def build_graph(provider: str = "groq"):
             )
         }
 
+    @staticmethod
     def send_reply(state: SalesAgentState) -> dict:
-        """Output the final response."""
         print("\n" + "=" * 80)
         print("AGENT RESPONSE:")
         print("=" * 80)
@@ -321,17 +393,21 @@ def build_graph(provider: str = "groq"):
         print("=" * 80 + "\n")
         return {}
 
-    workflow = StateGraph(SalesAgentState)
-    workflow.add_node("read_user_prompt", read_user_prompt)
-    workflow.add_node("classify_intent", classify_intent)
-    workflow.add_node("get_game_requirements", get_game_requirements)
-    workflow.add_node("get_filtered_laptops", get_filtered_laptops)
-    workflow.add_node("get_recommended_laptops", get_recommended_laptops)
-    workflow.add_node("explain_reccomandations", explain_reccomandations)
-    workflow.add_node("inform_user_no_laptops", inform_user_no_laptops)
-    workflow.add_node("inform_user_gibberish", inform_user_gibberish)
-    workflow.add_node("send_reply", send_reply)
 
+async def build_graph(provider: str = "groq"):
+    agent = SalesAgent(provider)
+    await agent.get_mcp_paths()
+
+    workflow = StateGraph(SalesAgentState)
+    workflow.add_node("read_user_prompt", agent.read_user_prompt)
+    workflow.add_node("classify_intent", agent.classify_intent)
+    workflow.add_node("get_game_requirements", agent.get_game_requirements)
+    workflow.add_node("get_filtered_laptops", agent.get_filtered_laptops)
+    workflow.add_node("get_recommended_laptops", agent.get_recommended_laptops)
+    workflow.add_node("explain_reccomandations", agent.explain_reccomandations)
+    workflow.add_node("inform_user_no_laptops", agent.inform_user_no_laptops)
+    workflow.add_node("inform_user_gibberish", agent.inform_user_gibberish)
+    workflow.add_node("send_reply", agent.send_reply)
     workflow.add_edge(START, "read_user_prompt")
     workflow.add_edge("read_user_prompt", "classify_intent")
     workflow.add_edge("inform_user_no_laptops", "send_reply")
@@ -340,5 +416,5 @@ def build_graph(provider: str = "groq"):
 
     memory = MemorySaver()
 
-    walfred = workflow.compile(checkpointer=memory)
-    return walfred
+    graph = workflow.compile(checkpointer=memory)
+    return graph

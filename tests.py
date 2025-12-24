@@ -1,10 +1,11 @@
+import asyncio
+
 from agent import build_graph
 
-walfred = build_graph(provider="groq")
-config = {"configurable": {"thread_id": "test_session_1"}}
 
-
-def test_agent(user_input: str):
+async def test_agent(user_input: str):
+    walfred = await build_graph(provider="groq")
+    config = {"configurable": {"thread_id": "test_session_1"}}
     initial_state = {
         "user_input": user_input,
         "classification": None,
@@ -16,11 +17,14 @@ def test_agent(user_input: str):
         "messages": [],
     }
 
-    result = walfred.invoke(initial_state, config)
+    result = walfred.ainvoke(initial_state, config)
     return result
 
 
-def test_agent_with_streaming(user_input: str):
+async def test_agent_with_streaming(user_input: str):
+    walfred = await build_graph(provider="groq")
+    config = {"configurable": {"thread_id": "test_session_1"}}
+
     initial_state = {
         "user_input": user_input,
         "classification": None,
@@ -36,7 +40,7 @@ def test_agent_with_streaming(user_input: str):
     print(f"USER INPUT: {user_input}")
     print(f"{'=' * 80}\n")
 
-    for event in walfred.stream(initial_state, config):
+    async for event in walfred.astream(initial_state, config):
         node_name = list(event.keys())[0]
         node_state = event[node_name]
 
@@ -78,7 +82,13 @@ def test_agent_with_streaming(user_input: str):
             print(f"\nFinal Response: {final_response[:200]}...")
 
     print(f"\n{'=' * 80}\n")
-    return walfred.get_state(config)
+
+    # if __name__ == "__main__":
+    #     # Example usage for testing
+    #     async def main():
+    #         await test_agent_with_streaming("i want to play a game called doom")
+    #
+    #     asyncio.run(main())
 
 
 if __name__ == "__main__":
